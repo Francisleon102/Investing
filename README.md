@@ -1,4 +1,1 @@
-# My Repo
-# Investing
-# Investing
-# Investing
+jupyter nbconvert --to python *.ipynb
