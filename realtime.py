@@ -1,22 +1,36 @@
-from alpaca.data.live import StockDataStream, OptionDataStream
-from collections import deque
-import pandas as pd
+from alpaca.data.live import StockDataStream
+from alpaca.data.enums import DataFeed
+from collections import deque 
+from queue import Queue
+
+
 import asyncio
+import pandas as pd
+from account import API_KEY, API_SECRET
 
-keys = {"action": "auth", "key": "PKO3KEBWUSH6F52XTUK44W46Q5", "secret": "12LNKiouSeFGiyUeqMK2ZXnDx146oJfyaZW8u9Vec1QE"}
-API_KEY = keys['key']
-API_SECRET = keys['secret']
-
-
-stocklive = StockDataStream(API_KEY, API_SECRET)
-print(stocklive._auth)
-async def Quote_handler(data):
-   print(data)
-
-stocklive.subscribe_bars(Quote_handler, "SYM")
-stocklive.run()
+SYMBOL = "AMD"
 
 
+stocklive = StockDataStream(API_KEY, API_SECRET, feed=DataFeed.SIP)
 
 
+async def quote_handler(data):
+    df = Queue(maxsize=10)
+    df.put(data)
+    s = df.get()
 
+    print(s)
+    
+
+
+stocklive.subscribe_trades(quote_handler, SYMBOL)
+try:
+    stocklive.run()
+except KeyboardInterrupt:
+    print("\nStopping stream...")
+    stop = getattr(stocklive, "stop_ws", None)
+    if callable(stop):
+        result = stop()
+        if asyncio.iscoroutine(result):
+            asyncio.run(result)
+    print("Stream closed.")
