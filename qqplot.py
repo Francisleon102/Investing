@@ -1,41 +1,32 @@
+import sys
 import numpy as np
+from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
 import pyqtgraph as pg
-from PyQt6 import QtCore
-from config import xdf
 
-app = pg.mkQApp("RT Scatter")
+app = QApplication(sys.argv)
 
-win = pg.GraphicsLayoutWidget(title="Real-time Scatter")
-p = win.addPlot()
-p.showGrid(x=True, y=True)
+window = QMainWindow()
+central = QWidget()
+layout = QVBoxLayout()
+central.setLayout(layout)
+window.setCentralWidget(central)
 
+# PyQtGraph plot
+plot = pg.PlotWidget()
+curve = plot.plot()
 
-x = xdf.iloc[:,2]
-y = xdf.iloc[:,6]
+# Qt button
+button = QPushButton("Update Data")
 
-p.setXRange(min(x), max(x))
-p.setYRange(min(y), max(y))
-p.enableAutoRange(x=False, y=False)
-
-sc = pg.ScatterPlotItem(size=9, brush='g')
-p.addItem(sc)
-
-idx = 0  # point index to reveal
-
+layout.addWidget(plot)
+layout.addWidget(button)
 
 def update():
-  global idx
-  if idx >= len(x):
-    timer.stop()
-    return
-  sc.setData(x[:idx + 1], y[:idx + 1])
-  idx += 1
+    x = np.arange(100)
+    y = np.random.randn(100).cumsum()
+    curve.setData(x, y)
 
+button.clicked.connect(update)
 
-timer = QtCore.QTimer()
-timer.timeout.connect(update)
-timer.start(160)   # ~60 FPS
-
-#update()  # draw first point immediately
-win.show()
-pg.exec()
+window.show()
+sys.exit(app.exec())
