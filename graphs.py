@@ -1,20 +1,34 @@
+import sys
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
+from PyQt6.QtWidgets import QApplication, QMainWindow
+import pyqtgraph as pg
 
-# fake price x time data
-price_bins = 50
-time_bins = 100
-data = np.random.rand(price_bins, time_bins)
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
 
-plt.figure(figsize=(12, 6))
-sns.heatmap(
-    data,
-    cmap='inferno',
-    cbar=True
-)
+        self.setWindowTitle("Live Graph")
+        self.resize(800, 500)
 
-plt.xlabel("Time")
-plt.ylabel("Price level")
-plt.title("Liquidity Heatmap")
-plt.show()
+        # Plot widget
+        self.plot_widget = pg.PlotWidget()
+        self.setCentralWidget(self.plot_widget)
+
+        # Styling
+        self.plot_widget.setBackground('k')
+        self.plot_widget.showGrid(x=True, y=True)
+
+        # Data
+        self.x = np.arange(100)
+        self.y = np.random.randn(100)
+
+        self.curve = self.plot_widget.plot(
+            self.x,
+            self.y,
+            pen=pg.mkPen(color='c', width=2)
+        )
+
+app = QApplication(sys.argv)
+window = MainWindow()
+window.show()
+sys.exit(app.exec())
