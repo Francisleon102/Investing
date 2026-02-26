@@ -133,3 +133,44 @@ class AlpacaDataClient:
 
     async def run_option_stream(self):
         await self.option_stream.run()
+
+
+
+client  = AlpacaDataClient(API_KEY, API_SECRET) 
+
+    # =========================
+    # Trading Client
+    # =========================
+
+
+class AlcapaTradingClient:
+    def __init__(self, api_key: str, api_secret: str):
+        self.contracts = TradingClient(
+            api_key=api_key,
+            secret_key=api_secret,
+            paper=True
+        )
+
+    def contract(self, underlying_symbols, expiration_date,
+                 strike_price_gte, strike_price_lte, type):
+
+        req = GetOptionContractsRequest(
+            underlying_symbols=underlying_symbols,  # FIXED
+            expiration_date=expiration_date,
+            strike_price_gte=strike_price_gte,
+            strike_price_lte=strike_price_lte,
+            type=type
+        )
+
+        return self.contracts.get_option_contracts(req)
+
+
+tradeClient = AlcapaTradingClient(API_KEY, API_SECRET)
+
+all_contracts = tradeClient.contract(
+    underlying_symbols=["AAPL"],
+    expiration_date="2026-01-21",
+    strike_price_gte="150",
+    strike_price_lte="200",
+    type=ContractType.CALL
+)
