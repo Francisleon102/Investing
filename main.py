@@ -20,22 +20,26 @@ end_date = datetime.now()
 x = list[0]
 
 
-def MakeOptionsym(sym: str, type: str, date: datetime, strike):
-    strike = [10, 30, 50, 70]   # your list
+
+def MakeOptionsym(sym: list, type: str, date: datetime, strike: list):
     symbols = []
     date = date.strftime("%y%m%d")
-    for i in strike:
-        strike_val = int(round(i * 1000))
-        pad = 8 - len(str(strike_val))
-        pad = "0" * pad
-        symbols.append(sym + str(date) + type + pad + str(strike_val))
+
+    for s in sym:
+        for i in strike:
+            strike_val = int(round(i * 1000))
+            pad = 8 - len(str(strike_val))
+            pad = "0" * pad
+
+            symbols.append(s + str(date) + type + pad + str(strike_val))
+
     return symbols
 
+syms = ["INTC", "NVDA"]
+strikes = [10, 30, 50]
 
-z = MakeOptionsym(list[1],"C",datetime(2026,1,30), 75)
+z = MakeOptionsym(syms, "C", datetime(2026,4,24), strikes)
 print(z)
-l = "INTC260130C00060000"
-start_date
 
 
 def main ():
