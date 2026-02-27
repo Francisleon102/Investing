@@ -18,7 +18,8 @@ optionlive = OptionDataStream(API_KEY, API_SECRET, raw_data=False, feed=OptionsF
 # --- handlers ---
 async def stock_trade_handler(q):
     stock_quotes.append(q)
-    print(q)
+    size = len(stock_quotes)
+    
 
 async def stock_quote_handler(q):
     stock_quotes.append(q)
