@@ -5,20 +5,26 @@ import asyncio
 from account import API_KEY, API_SECRET
 
 SYMBOL = "INTC"
-OPTIONSTR = "INTC260424C00030000"
+OPTIONSTR = "AAPL260227C00200000"
 
 # persistent buffers
-stock_quotes = deque(maxlen=50000)
-opt_quotes   = deque(maxlen=5000)
-opt_trades   = deque(maxlen=5000)
+stock_quotes = deque()
+opt_quotes   = deque()
+opt_trades   = deque()
 
 stocklive = StockDataStream(API_KEY, API_SECRET, feed=DataFeed.SIP)
 optionlive = OptionDataStream(API_KEY, API_SECRET, raw_data=False, feed=OptionsFeed.OPRA)
 
 # --- handlers ---
+async def stock_trade_handler(q):
+    stock_quotes.append(q)
+    print(q)
+
 async def stock_quote_handler(q):
     stock_quotes.append(q)
     print(q)
+
+
 async def option_quote_handler(q):
     opt_quotes.append(q)
     print(f"OPT QUOTE {q.symbol} bid={q.bid_price}@{q.bid_size} ask={q.ask_price}@{q.ask_size} t={q.timestamp}")
@@ -32,13 +38,14 @@ async def option_trade_handler(t):
 optionlive.subscribe_quotes(option_quote_handler, OPTIONSTR)
 optionlive.subscribe_trades(option_trade_handler, OPTIONSTR)
 
-stocklive.subscribe_trades(stock_quote_handler,SYMBOL)
+stocklive.subscribe_trades(stock_trade_handler,SYMBOL)
+stocklive.subscribe_quotes(stock_quote_handler, SYMBOL)
 
 # --- run both ---
 async def main():
     await asyncio.gather(
        stocklive._run_forever(),   # internal runner used by run()
-        #optionlive._run_forever()
+        optionlive._run_forever()
     )
 
 if __name__ == "__main__":
