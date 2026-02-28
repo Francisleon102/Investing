@@ -30,7 +30,7 @@ def update(q):
         if dt > 0:
             rate = (Pnow - last_price) / dt
             
-            test.rate  = rate
+            test.rate = rate
             
     last_price = Pnow
     last_time = Tnow
