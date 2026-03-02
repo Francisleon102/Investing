@@ -28,7 +28,12 @@ class MainWindow(QMainWindow):
             pen=pg.mkPen(color='c', width=2)
         )
 
-app = QApplication(sys.argv)
-window = MainWindow()
-window.show()
-sys.exit(app.exec())
+def run():
+    app = QApplication.instance() or QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    raise SystemExit(run())

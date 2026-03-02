@@ -1,23 +1,14 @@
-from ast import main
+from datetime import datetime
+from multiprocessing import Process
 
-from clients import  API_KEY,API_SECRET, tradeClient
-
-from alpaca.data.enums import DataFeed
-from alpaca.trading.enums import ContractType
-from alpaca.trading.client import OptionContract, TradingClient, TradeAccount, GetOptionContractsRequest
-from alpaca.data.timeframe import TimeFrame ; import cudf as cdf 
-from datetime import datetime, timezone, date
-import polars as pl
-from alpaca.data.live import StockDataStream, OptionDataStream
-from account import API_KEY , API_SECRET
-from collections import  deque
-import pyqtgraph as pg 
+from graphs import run as run_graphs
+from realtime import run as run_realtime
 
 
-list = ["SYM", "INTC", "NVDA", "ARM", "AMD"]
+symbols = ["SYM", "INTC", "NVDA", "ARM", "AMD"]
 start_date = datetime(2026,2, 25).date()
 end_date = datetime.now()
-x = list[0]
+x = symbols[0]
 
 
 
@@ -32,18 +23,21 @@ def MakeOptionsym(sym: list, type: str, date: datetime, strike: list):
             pad = "0" * pad
 
             symbols.append(s + str(date) + type + pad + str(strike_val))
-
     return symbols
 
 syms = ["INTC", "NVDA"]
 strikes = [10, 30, 50]
-
 z = MakeOptionsym(syms, "C", datetime(2026,4,24), strikes)
 print(z)
 
 
 def main ():
-    print("We up ")
+    p1 = Process(target=run_realtime)
+    p2 = Process(target=run_graphs)
+    p1.start()
+    p2.start()
+    p1.join()
+    p2.join()
 
 if __name__ == "__main__":
     main()
