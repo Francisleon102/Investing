@@ -43,3 +43,31 @@ class FlowMomentum:
 
         self.t_prev = t
         return r, self.M, self.E
+
+
+
+
+
+
+
+
+        last_price = None
+last_time = None
+last_size = None 
+
+def update(q):
+    global last_price, last_time
+
+    Pnow = q["s"]
+    ts = q["t"]
+    Tnow = ts.seconds + ts.nanoseconds * 1e-9
+
+    if last_price is not None:
+        dt = Tnow - last_time
+        if dt > 0:
+            rate = (Pnow - last_price) / dt
+            
+           # test.rate = rate
+            
+    last_price = Pnow
+    last_time = Tnow

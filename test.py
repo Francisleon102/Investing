@@ -1,6 +1,8 @@
 import numpy as np
 import pyqtgraph as pg
 from PyQt6 import QtCore
+import os
+print("test PID:", os.getpid())
 
 app = pg.mkQApp("RT Scatter")
 win = pg.GraphicsLayoutWidget(title="Real-time Scatter")
