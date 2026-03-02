@@ -1,5 +1,5 @@
 from multiprocessing import Process, Queue
-from realtime import run as run_realtime,StockData
+from realtime import run as run_realtime
 from graphs import run as run_graphs
 import time
 
@@ -11,7 +11,7 @@ def main():
 
     p1.start()
     p2.start()
-    p3.start()
+    #p3.start()
 
     try:
         p1.join()
@@ -25,12 +25,9 @@ def main():
 
 
 def z():
-        time.sleep(5)
-        if(StockData is not None):
-            print(len(StockData))
-            
-        else:
-            print("empty")
+   
+    pass  
+       
     
 
 
