@@ -1,5 +1,6 @@
 from alpaca.data.live import StockDataStream, OptionDataStream
 from alpaca.data.enums import DataFeed, OptionsFeed
+from alpaca.trading.client import TradingClient
 from collections import deque
 
 import asyncio
@@ -7,11 +8,14 @@ from account import API_KEY, API_SECRET
 import os
 import numpy as np
 
-import test 
+
+#import test 
 print("Realtime PID:", os.getpid())
 SYMBOL = "AAPL"
 OPTIONSTR = "AAPL260227C00200000"
 
+clock = TradingClient(API_KEY, API_SECRET).get_clock()  # Clock object
+print("OPEN" if clock.is_open else "CLOSED")
 
 last_price = None
 last_time = None
@@ -30,7 +34,7 @@ def update(q):
         if dt > 0:
             rate = (Pnow - last_price) / dt
             
-            test.rate = rate
+           # test.rate = rate
             
     last_price = Pnow
     last_time = Tnow
