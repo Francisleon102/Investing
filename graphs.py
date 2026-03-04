@@ -9,6 +9,8 @@ class MainWindow(QMainWindow):
     def __init__(self, mp_q):
         super().__init__()
         self.mp_q = mp_q
+     
+        
 
         self.setWindowTitle("Live Graph")
         self.resize(800, 500)
@@ -32,18 +34,20 @@ class MainWindow(QMainWindow):
         self.timer.start(16)  # ~60 FPS
 
     def update_plot(self):
+        n = 0 
         # Drain queue without blocking UI
         while True:
             try:
-                kind, msg = self.mp_q.get_nowait()
+                msg = self.mp_q.get_nowait()
+                n +=1
             except Empty:
                 break
 
-            if kind == "stock_trade":
-                price = msg.get("p") 
-                if price is not None:
-                    self.y.append(price)
-                    self.x.append(len(self.y))
+        
+            price = msg("p") 
+            if price is not None:
+                self.y.append(price)
+                self.x.append(len(self.y))
 
         if self.y:
             self.curve.setData(self.x[-500:], self.y[-500:])

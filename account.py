@@ -14,5 +14,8 @@ else:
 client = TradingClient(API_KEY, API_SECRET, paper=True)
 account = client.get_account()
 
+
 print(account.buying_power)
+
+
 
