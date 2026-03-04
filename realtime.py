@@ -5,7 +5,7 @@ from alpaca.data.enums import DataFeed, OptionsFeed
 from account import API_KEY, API_SECRET
 
 SYMBOL    = "AAPL"
-OPTIONSTR = "AAPL260227C00200000"
+OPTIONSTR = "AAPL260306C00265000" 
 
 def run(mp_q):
     print("Realtime PID:", os.getpid())
@@ -15,6 +15,7 @@ def run(mp_q):
 
     async def stock_trade_handler(msg):
         try:
+          
             mp_q.put_nowait(("stock_trade", msg))   # dict
         except Full:
             pass
@@ -22,10 +23,12 @@ def run(mp_q):
     async def stock_quotes_handler(msg):
         try:
             mp_q.put_nowait(("stock_quotes", msg))  # dict (raw_data=True)
+            print(msg)
         except Full:
             pass
     async def option_trade_handler(msg):
         try:
+            print(msg)
             mp_q.put_nowait(("option_trade", msg))  # dict (raw_data=True)
         except Full:
             pass
@@ -37,7 +40,7 @@ def run(mp_q):
             pass
     
     stocklive.subscribe_trades(stock_trade_handler, SYMBOL)
-    stocklive.subscribe_quotes(stock_trade_handler,SYMBOL)
+    stocklive.subscribe_quotes(stock_quotes_handler,SYMBOL)
     optionlive.subscribe_trades(option_trade_handler, OPTIONSTR)
     optionlive.subscribe_quotes(option_quote_handler, OPTIONSTR)
 
@@ -45,7 +48,7 @@ def run(mp_q):
         try:
             await asyncio.gather(
                 stocklive._run_forever(),
-                optionlive._run_forever(),
+                optionlive._run_forever()
             )
         finally:
             # graceful close (stop_ws is async)

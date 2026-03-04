@@ -19,7 +19,6 @@ def hub(q_in, outs, maxlen=50000):
 
 def main():
     q_in = Queue(maxsize=50000)
-
     q_graph = Queue(maxsize=50000)
     q_log   = Queue(maxsize=50000)   # example second copy
 

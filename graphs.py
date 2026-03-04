@@ -13,7 +13,7 @@ class MainWindow(QMainWindow):
         
 
         self.setWindowTitle("Live Graph")
-        self.resize(800, 500)
+        self.resize(1800, 500)
 
         self.plot_widget = pg.PlotWidget()
         self.setCentralWidget(self.plot_widget)
@@ -38,16 +38,16 @@ class MainWindow(QMainWindow):
         # Drain queue without blocking UI
         while True:
             try:
-                msg = self.mp_q.get_nowait()
+                type,  msg = self.mp_q.get_nowait()
                 n +=1
             except Empty:
                 break
 
-        
-            price = msg("p") 
-            if price is not None:
-                self.y.append(price)
-                self.x.append(len(self.y))
+            if(type == "stock_trade"):
+                price = msg.get("p") 
+                if price is not None:
+                    self.y.append(price)
+                    self.x.append(len(self.y))
 
         if self.y:
             self.curve.setData(self.x[-500:], self.y[-500:])
