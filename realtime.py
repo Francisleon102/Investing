@@ -4,7 +4,7 @@ from alpaca.data.live import StockDataStream, OptionDataStream
 from alpaca.data.enums import DataFeed, OptionsFeed
 from account import API_KEY, API_SECRET
 
-SYMBOL    = "AAPL"
+SYMBOL    = "INTC"
 OPTIONSTR = "AAPL260306C00265000" 
 
 def run(mp_q):

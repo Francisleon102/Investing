@@ -51,7 +51,7 @@ class FlowMomentum:
 
 
 
-        last_price = None
+ast_price = None
 last_time = None
 last_size = None 
 
@@ -71,8 +71,6 @@ def update(q):
             
     last_price = Pnow
     last_time = Tnow
-
-
 
 
 
