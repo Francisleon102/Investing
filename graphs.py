@@ -28,11 +28,11 @@ class MainWindow(QMainWindow):
         self.p0.showGrid(x=True, y=True)
 
         # Row 0 col 1: Quotes
-        self.pQ = self.win.addPlot(row=0, col=1, title="Quotes: Bid vs Ask (example)")
-        self.pQ.showGrid(x=True, y=True)
+        #self.pQ = self.win.addPlot(row=0, col=0, title="Quotes: Bid vs Ask ")
+        #self.pQ.showGrid(x=True, y=True)
 
         # Row 1: Bars
-        self.p1 = self.win.addPlot(row=1, col=0, colspan=2, title="Size Bars")
+        self.p1 = self.win.addPlot(row=1, col=1, colspan=1, title="Liquidity Bars: Bid/Ask Size by Price")
         self.p1.showGrid(x=True, y=True)
 
         # =========================
@@ -42,17 +42,19 @@ class MainWindow(QMainWindow):
         self.line0 = self.p0.plot(pen=pg.mkPen('c', width=2))
         self.scatter0 = pg.ScatterPlotItem(size=6, brush=pg.mkBrush('y'))
         self.p0.addItem(self.scatter0)
-
+        
         self.text0 = pg.TextItem("Trades: 0", color='g')
         self.p0.addItem(self.text0)
 
-        # Quotes items (keep simple: one line for bid, one line for ask)
-        self.bid_line = self.pQ.plot(pen=pg.mkPen('g', width=2))
-        self.ask_line = self.pQ.plot(pen=pg.mkPen('r', width=2))
+        # Quotes items
+        #self.bid_line = self.pQ.plot(pen=pg.mkPen('g', width=2))
+        #self.ask_line = self.pQ.plot(pen=pg.mkPen('r', width=2))
 
-        # Bars
-        self.bars1 = pg.BarGraphItem(x=[], height=[], width=0.9)
-        self.p1.addItem(self.bars1)
+        # Bars: bid + ask on same graph, same x axis = price
+        self.bid_bars = pg.BarGraphItem(x=[], height=[], width=0.01, brush=pg.mkBrush(0, 255, 0, 120))
+        self.ask_bars = pg.BarGraphItem(x=[], height=[], width=0.01, brush=pg.mkBrush(255, 0, 0, 120))
+        self.p1.addItem(self.bid_bars)
+        self.p1.addItem(self.ask_bars)
 
         # =========================
         # 4) DATA BUFFERS
@@ -90,8 +92,6 @@ class MainWindow(QMainWindow):
         self.trade_count += 1
 
     def on_stock_quotes(self, msg):
-        # correct keys from your quote example:
-        # bp, bs, ap, as
         bp = msg.get("bp")
         bs = msg.get("bs")
         ap = msg.get("ap")
@@ -118,8 +118,6 @@ class MainWindow(QMainWindow):
                 self.on_stock_trade(msg)
             elif msg_type == "stock_quotes":
                 self.on_stock_quotes(msg)
-            # elif msg_type == "option_trade": ...
-            # elif msg_type == "option_quote": ...
 
         # ---- render trades
         if self.trade_s:
@@ -132,18 +130,18 @@ class MainWindow(QMainWindow):
             self.text0.setText(f"Trades: {self.trade_count}")
             self.text0.setPos(xs[-1], ys[-1] + 5)
 
-            idx = list(range(len(ys)))
-            self.bars1.setOpts(x=idx, height=ys, width=0.9)
+      
 
-        # ---- render quotes (example: plot sizes vs prices)
-        if self.bid_s and self.ask_s:
-            bpx = self.bid_p[-500:]
-            bsy = self.bid_s[-500:]
-            apx = self.ask_p[-500:]
-            asy = self.ask_s[-500:]
+        # ---- render overlapping liquidity bars on same price x-axis
+            if self.bid_s:
+                    bpx = self.bid_p[-1000:]
+                    bsy = self.bid_s[-1000:]
+                    self.bid_bars.setOpts(x=bpx, height=bsy, width=0.003)
 
-            self.bid_line.setData(bpx, bsy)
-            self.ask_line.setData(apx, asy)
+            if self.ask_s:
+                apx = self.ask_p[-1000:]
+                asy = self.ask_s[-1000:]
+                self.ask_bars.setOpts(x=apx, height=asy, width=0.003)
 
 def run(mp_q):
     app = QApplication(sys.argv)
@@ -152,7 +150,7 @@ def run(mp_q):
     return app.exec()
 
 # =========================
-# OPTIONAL: rate-of-change helper (fix: use price "p" not "s")
+# OPTIONAL: rate-of-change helper
 # =========================
 last_price = None
 last_time = None

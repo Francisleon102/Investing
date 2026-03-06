@@ -51,7 +51,7 @@ def run(mp_q):
         try:
             await asyncio.gather(
                 stocklive._run_forever(),
-                optionlive._run_forever()
+                #optionlive._run_forever()
             )
         finally:
             # graceful close (stop_ws is async)
