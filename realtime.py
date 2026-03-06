@@ -1,7 +1,9 @@
+from concurrent.futures import thread
 import os, asyncio
 from queue import Full
 from alpaca.data.live import StockDataStream, OptionDataStream
 from alpaca.data.enums import DataFeed, OptionsFeed
+from threading import Thread
 from account import API_KEY, API_SECRET
 
 SYMBOL    = "INTC"
@@ -38,7 +40,8 @@ def run(mp_q):
             mp_q.put_nowait(("option_quote", msg))  # dict (raw_data=True)
         except Full:
             pass
-    
+
+        
     stocklive.subscribe_trades(stock_trade_handler, SYMBOL)
     stocklive.subscribe_quotes(stock_quotes_handler,SYMBOL)
     optionlive.subscribe_trades(option_trade_handler, OPTIONSTR)
