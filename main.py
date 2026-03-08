@@ -1,7 +1,6 @@
 from multiprocessing import Process, Queue
 from collections import deque
 import subprocess
-
 from realtime import run as run_realtime
 from graphs import run as run_graphs
 from quantcore import run as run_quantcore
