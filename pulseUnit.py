@@ -3,7 +3,8 @@ import time
 from queue import Empty
 from collections import deque
 from threading import Thread, Lock
-from cuml import  HDBSCAN
+from cuml.cluster import  HDBSCAN, KMeans
+from polars import self_dtype 
 
 
 class GraphsRender:
@@ -27,14 +28,21 @@ class Scatter3D:
 class ClusterWorker:
     def __init__(self):
         self.enabled = True
-        self.buffer = deque(maxlen=5000)
+        self.maxlenght = 5000
+        self.buffer = deque(maxlen=self.maxlenght)
 
     def push(self, msg_type, msg):
         self.buffer.append((msg_type, msg))
+       
+     
+        if(len(self.buffer) == self.maxlenght):
+            print("deque full")
+            
 
     def step(self):
         # template for clustering work
         # example: DBSCAN / HDBSCAN / custom density logic
+        
         pass
 
 
@@ -45,6 +53,9 @@ class MathWorker:
 
     def push(self, msg_type, msg):
         self.buffer.append((msg_type, msg))
+        #print(self.buffer)
+      
+     
 
     def step(self):
         # template for math features
@@ -157,9 +168,11 @@ class QuantCore:
         try:
             while True:
                 try:
-                    msg_type, msg = self.mp_q.get(timeout=1.0)
+                    msg_type, msg = self.mp_q.get(timeout=0.03)
                     self.dispatch(msg_type, msg)
+                  
                 except Empty:
+                    
                     pass
 
         except KeyboardInterrupt:

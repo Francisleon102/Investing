@@ -15,7 +15,6 @@ y = np.random.normal(size=N)
 
 sc = pg.PlotCurveItem(size=5)
 p.addItem(sc)
-
 i = 0
 
 def update():

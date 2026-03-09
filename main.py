@@ -12,7 +12,7 @@ def hub(q_in, outs, maxlen=50000):
         msg = q_in.get()            # blocks
         history.append(msg)
 
-        # broadcast: each subscriber gets its own copy
+        # broadcast: each subscriber gets its own copy 
         for q_out in outs:
             try:
                 q_out.put_nowait(msg)
