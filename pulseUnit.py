@@ -4,6 +4,7 @@ from queue import Empty
 from collections import deque
 from threading import Thread, Lock
 from cuml.cluster import  HDBSCAN, KMeans
+import cuml.accel 
 from polars import self_dtype 
 
 

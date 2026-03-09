@@ -3,7 +3,7 @@ from collections import deque
 import subprocess
 from realtime import run as run_realtime
 from graphs import run as run_graphs
-from quantcore import run as run_quantcore
+from pulseUnit import run as run_quantcore
 
 
 def hub(q_in, outs, maxlen=50000):
