@@ -25,7 +25,7 @@ def run(mp_q):
     async def stock_quotes_handler(msg):
         try:
             mp_q.put_nowait(("stock_quotes", msg))  # dict (raw_data=True)
-            print(msg)
+            
         except Full:
             pass
     async def option_trade_handler(msg):

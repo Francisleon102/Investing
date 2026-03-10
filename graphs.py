@@ -24,7 +24,7 @@ class MainWindow(QMainWindow):
         # 2) PLOTS (rows/cols)
         # =========================
         # Row 0: Trades
-        self.p0 = self.win.addPlot(row=0, col=0, title="Trades: Price vs Size")
+        self.p0 = self.win.addPlot(row=0, col=0,colspan =1,  title="Trades: Price vs Size")
         self.p0.showGrid(x=True, y=True)
 
         # Row 0 col 1: Quotes
@@ -32,7 +32,7 @@ class MainWindow(QMainWindow):
         #self.pQ.showGrid(x=True, y=True)
 
         # Row 1: Bars
-        self.p1 = self.win.addPlot(row=1, col=1, colspan=1, title="Liquidity Bars: Bid/Ask Size by Price")
+        self.p1 = self.win.addPlot(row=1, col=1, colspan=2, title="Liquidity Bars: Bid/Ask Size by Price")
         self.p1.showGrid(x=True, y=True)
 
         # =========================

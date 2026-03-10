@@ -51,7 +51,7 @@ class FlowMomentum:
 
 
 
-ast_price = None
+last_price = None
 last_time = None
 last_size = None 
 
@@ -113,3 +113,16 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+    | Attribute              | Purpose                                 |
+| ---------------------- | --------------------------------------- |
+| `labels_`              | cluster id per point                    |
+| `probabilities_`       | cluster confidence                      |
+| `cluster_persistence_` | cluster stability                       |
+| `outlier_scores_`      | anomaly score                           |
+| `n_clusters_`          | number of clusters                      |
+| `prediction_data_`     | allows predicting clusters for new data |

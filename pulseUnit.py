@@ -31,14 +31,38 @@ class ClusterWorker:
         self.enabled = True
         self.maxlenght = 5000
         self.buffer = deque(maxlen=self.maxlenght)
+        # Last variables for Derivatives 
+        self.last_price  = None
+        self.last_time   = None
+        self.last_size  = None 
+       
+
 
     def push(self, msg_type, msg):
+        if msg is None:
+            return
+
         self.buffer.append((msg_type, msg))
-       
-     
-        if(len(self.buffer) == self.maxlenght):
-            print("deque full")
-            
+
+        if msg_type != "stock_trade":
+            return
+
+        new_size = msg.get("s")
+        new_time = msg.get("t")
+        new_price = msg.get("p")
+        if new_size is None or new_time is None:
+            return
+
+        Tnow = new_time.seconds + new_time.nanoseconds * 1e-9
+
+        if self.last_size is not None:
+            dt = Tnow - self.last_time
+            if dt > 0:
+                rate = (new_size - self.last_size) / dt
+                print(f"size/sec", [rate , new_size, new_price, Tnow])
+
+        self.last_size = new_size
+        self.last_time = Tnow
 
     def step(self):
         # template for clustering work
@@ -163,13 +187,13 @@ class QuantCore:
         #     ...
 
     def run_forever(self):
-        print("QuantCore PID:", os.getpid())
+        print("PulseUnit PID:", os.getpid())
         self.engine.start_threads()
 
         try:
             while True:
                 try:
-                    msg_type, msg = self.mp_q.get(timeout=0.03)
+                    msg_type, msg = self.mp_q.get(timeout=0.5)
                     self.dispatch(msg_type, msg)
                   
                 except Empty:
