@@ -4,7 +4,7 @@ from account import API_KEY , API_SECRET
 
 import numpy as np
 #import incoming as inc
-import matplotlib.pyplot as plt
+
 import pandas as pd
 from alpaca.data.historical import StockHistoricalDataClient, OptionHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest, StockQuotesRequest, OptionTradesRequest, OptionBarsRequest, OptionLatestQuoteRequest
@@ -20,7 +20,7 @@ import polars as pl
 from alpaca.data.live import StockDataStream, OptionDataStream
 from account import API_KEY , API_SECRET
 from collections import  deque
-import pyqtgraph as pg 
+
 
 global  t2 
 
@@ -105,5 +105,17 @@ class AlpacaDataClient:
     
 
 
-  
 client = AlpacaDataClient(API_KEY, API_SECRET)
+
+
+stock_quote = client.stock_quotes(symbols="INTC",start=datetime(2026, 3, 10),end=datetime.today()).df
+print(stock_quote.head(100))
+
+
+
+
+def Agg(data):
+
+
+    pass 
+
