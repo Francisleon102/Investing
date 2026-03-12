@@ -6,12 +6,13 @@ from threading import Thread, Lock
 from cuml.cluster import  HDBSCAN, KMeans
 import cuml.accel 
 from polars import self_dtype 
+import numpy as np
 
 
 class GraphsRender:
     def __init__(self):
         self.enabled = True
-
+     
     def update(self, msg_type, msg):
         # template for shared render-related prep
         pass
@@ -27,14 +28,18 @@ class Scatter3D:
 
 
 class ClusterWorker:
-    def __init__(self):
+    def __init__(self,pU_rate):
         self.enabled = True
         self.maxlenght = 5000
         self.buffer = deque(maxlen=self.maxlenght)
+        self.pU_rate = pU_rate
         # Last variables for Derivatives 
         self.last_price  = None
         self.last_time   = None
         self.last_size  = None 
+        self.M = 0.0        # momentum state
+        self.tau = 1.0      # smoothing memory (seconds)    
+
        
 
 
@@ -50,16 +55,31 @@ class ClusterWorker:
         new_size = msg.get("s")
         new_time = msg.get("t")
         new_price = msg.get("p")
+
         if new_size is None or new_time is None:
             return
 
         Tnow = new_time.seconds + new_time.nanoseconds * 1e-9
 
         if self.last_size is not None:
+
             dt = Tnow - self.last_time
             if dt > 0:
-                rate = (new_size - self.last_size) / dt
-                print(f"size/sec", [rate , new_size, new_price, Tnow])
+
+                # incoming volume
+                dv = new_size
+
+                # raw flow rate
+                r = dv / dt
+
+                # exponential decay
+                decay = np.exp(-dt / self.tau)
+
+                # momentum update
+                self.M = self.M * decay + r * (1 - decay)
+                self.pU_rate.value = self.M
+
+                print("M (smoothed rate):", self.M, new_price, Tnow)
 
         self.last_size = new_size
         self.last_time = Tnow
@@ -102,8 +122,8 @@ class SignalWorker:
 
 
 class QuantEngine:
-    def __init__(self):
-        self.cluster_worker = ClusterWorker()
+    def __init__(self,pU_rate):
+        self.cluster_worker = ClusterWorker(pU_rate)
         self.math_worker = MathWorker()
         self.signal_worker = SignalWorker()
         
@@ -147,12 +167,13 @@ class QuantEngine:
 
 
 class QuantCore:
-    def __init__(self, mp_q):
+    def __init__(self, mp_q, pU_rate):
         self.mp_q = mp_q
+        self.pU_rate = pU_rate
 
         self.graphs_render = GraphsRender()
         self.scatter3d = Scatter3D()
-        self.engine = QuantEngine()
+        self.engine = QuantEngine(self.pU_rate)
 
         self.trade_count = 0
         self.quote_count = 0
@@ -204,6 +225,6 @@ class QuantCore:
             self.engine.stop_threads()
 
 
-def run(mp_q):
-    qc = QuantCore(mp_q)
+def run(mp_q,pU_rate):
+    qc = QuantCore(mp_q,pU_rate)
     qc.run_forever()

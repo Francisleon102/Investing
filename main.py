@@ -1,4 +1,4 @@
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Value
 from collections import deque
 import subprocess
 from realtime import run as run_realtime
@@ -28,7 +28,7 @@ def prevent_sleep():
         "systemd-inhibit",
         "--what=sleep",
         "--why=live market streaming",
-        "sleep",
+        "sleep:idle",
         "infinity"
     ])
 
@@ -40,11 +40,12 @@ def main():
     q_graph     = Queue(maxsize=50000)
     q_quantcore = Queue(maxsize=50000)
     q_log       = Queue(maxsize=50000)
+    pU_rate     = Value('d', 0.0)
 
     p1 = Process(target=run_realtime, args=(q_in,))
     pH = Process(target=hub, args=(q_in, [q_graph, q_quantcore, q_log]))
-    p2 = Process(target=run_graphs, args=(q_graph,))
-    p3 = Process(target=run_quantcore, args=(q_quantcore,))
+    p2 = Process(target=run_graphs, args=(q_graph,pU_rate))
+    p3 = Process(target=run_quantcore, args=(q_quantcore,pU_rate))
 
     p1.start(); pH.start(); p2.start(); p3.start()
 

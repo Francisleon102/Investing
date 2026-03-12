@@ -7,9 +7,11 @@ from queue import Empty
 ratex = None
 
 class MainWindow(QMainWindow):
-    def __init__(self, mp_q):
+    def __init__(self, mp_q, pU_rate):
         super().__init__()
         self.mp_q = mp_q
+        self.pU_rate = pU_rate
+
 
         self.setWindowTitle("Live Graph")
         self.resize(1300, 800)
@@ -24,15 +26,16 @@ class MainWindow(QMainWindow):
         # 2) PLOTS (rows/cols)
         # =========================
         # Row 0: Trades
-        self.p0 = self.win.addPlot(row=0, col=0,colspan =1,  title="Trades: Price vs Size")
+        self.p0 = self.win.addPlot(row=0, col=0,  title="Trades: Price vs Size")
         self.p0.showGrid(x=True, y=True)
 
         # Row 0 col 1: Quotes
-        #self.pQ = self.win.addPlot(row=0, col=0, title="Quotes: Bid vs Ask ")
-        #self.pQ.showGrid(x=True, y=True)
+        self.p2 = self.win.addPlot(row=0, col=1, title=" Trade Velocity")
+        self.p2.showGrid(x=True, y=True)
+        self.p2.enableAutoRange(x=True, y=True)
 
         # Row 1: Bars
-        self.p1 = self.win.addPlot(row=1, col=1, colspan=2, title="Liquidity Bars: Bid/Ask Size by Price")
+        self.p1 = self.win.addPlot(row=1, col=1, title="Liquidity Bars: Bid/Ask Size by Price")
         self.p1.showGrid(x=True, y=True)
 
         # =========================
@@ -40,8 +43,10 @@ class MainWindow(QMainWindow):
         # =========================
         # Trades items
         self.line0 = self.p0.plot(pen=pg.mkPen('c', width=2))
+        self.line1 = self.p2.plot(pen=pg.mkPen('y', width=2))
         self.scatter0 = pg.ScatterPlotItem(size=6, brush=pg.mkBrush('y'))
         self.p0.addItem(self.scatter0)
+        self.p2.addItem(self.line1)
         
         self.text0 = pg.TextItem("Trades: 0", color='g')
         self.p0.addItem(self.text0)
@@ -90,6 +95,7 @@ class MainWindow(QMainWindow):
         self.trade_p.append(price)
         self.trade_s.append(size)
         self.trade_count += 1
+        
 
     def on_stock_quotes(self, msg):
         bp = msg.get("bp")
@@ -126,6 +132,7 @@ class MainWindow(QMainWindow):
 
             self.line0.setData(xs, ys)
             self.scatter0.setData(x=xs, y=ys)
+            self.line1.setData([self.pU_rate.value])
 
             self.text0.setText(f"Trades: {self.trade_count}")
             self.text0.setPos(xs[-1], ys[-1] + 5)
@@ -143,34 +150,13 @@ class MainWindow(QMainWindow):
                 asy = self.ask_s[-1000:]
                 self.ask_bars.setOpts(x=apx, height=asy, width=0.003)
 
-def run(mp_q):
+def run(mp_q, pU_rate):
     app = QApplication(sys.argv)
-    window = MainWindow(mp_q)
+    window = MainWindow(mp_q,pU_rate)
     window.show()
     return app.exec()
 
-# =========================
-# OPTIONAL: rate-of-change helper
-# =========================
-last_price = None
-last_time = None
 
-def RateofChange(trade_msg):
-    global last_price, last_time, ratex
-    Pnow = trade_msg.get("p")
-    ts = trade_msg.get("t")
-    if Pnow is None or ts is None:
-        return
-
-    Tnow = ts.seconds + ts.nanoseconds * 1e-9
-
-    if last_price is not None:
-        dt = Tnow - last_time
-        if dt > 0:
-            ratex = (Pnow - last_price) / dt
-
-    last_price = Pnow
-    last_time = Tnow
 
 if __name__ == "__main__":
     raise SystemExit("Run from main.py")
