@@ -2,6 +2,7 @@ import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow
 from PyQt6.QtCore import QTimer
 import pyqtgraph as pg
+import numpy as np
 from queue import Empty
 
 ratex = None
@@ -67,6 +68,7 @@ class MainWindow(QMainWindow):
         # trades
         self.trade_p = []
         self.trade_s = []
+        self.trade_t = []
 
         # quotes
         self.bid_p = []
@@ -76,6 +78,11 @@ class MainWindow(QMainWindow):
 
         # counters
         self.trade_count = 0
+
+        #PulseUnitBuffers 
+        self.pulse_t = []
+        self.pulse_m = []
+       
 
         # =========================
         # 5) TIMER
@@ -90,10 +97,14 @@ class MainWindow(QMainWindow):
     def on_stock_trade(self, msg):
         price = msg.get("p")
         size  = msg.get("s")
+        time  = msg.get("t")
+        time = time.seconds + time.nanoseconds * 1e-9
+
         if price is None or size is None:
             return
         self.trade_p.append(price)
         self.trade_s.append(size)
+        self.trade_t.append(time)
         self.trade_count += 1
         
 
@@ -125,6 +136,18 @@ class MainWindow(QMainWindow):
             elif msg_type == "stock_quotes":
                 self.on_stock_quotes(msg)
 
+        # ---- drain pulse unit queue
+        while True:
+            try:
+                pulse_t, pulse_m = self.pU_rate.get_nowait()
+            except Empty:
+                break
+            except (TypeError, ValueError):
+                continue
+
+            self.pulse_t.append(pulse_t)
+            self.pulse_m.append(pulse_m)
+
         # ---- render trades
         if self.trade_s:
             xs = self.trade_p[-500:]
@@ -132,10 +155,14 @@ class MainWindow(QMainWindow):
 
             self.line0.setData(xs, ys)
             self.scatter0.setData(x=xs, y=ys)
-            self.line1.setData([self.pU_rate.value])
 
             self.text0.setText(f"Trades: {self.trade_count}")
             self.text0.setPos(xs[-1], ys[-1] + 5)
+
+        if self.pulse_t:
+            m = np.asarray(self.pulse_m[-500:], dtype=float)
+            m = np.convolve(m, [0.25, 0.5, 0.25], mode="same") if m.size >= 3 else m
+            self.line1.setData(self.pulse_t[-500:], m)
 
       
 

@@ -1,6 +1,6 @@
 import os
 import time
-from queue import Empty
+from queue import Empty, Full
 from collections import deque
 from threading import Thread, Lock
 from cuml.cluster import  HDBSCAN, KMeans
@@ -77,7 +77,11 @@ class ClusterWorker:
 
                 # momentum update
                 self.M = self.M * decay + r * (1 - decay)
-                self.pU_rate.value = self.M
+                try:
+                    self.pU_rate.put_nowait((Tnow, self.M))
+                except Full:
+                    # Drop sample if renderer is behind; keep producer alive.
+                    pass
 
                 print("M (smoothed rate):", self.M, new_price, Tnow)
 

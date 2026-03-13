@@ -40,7 +40,7 @@ def main():
     q_graph     = Queue(maxsize=50000)
     q_quantcore = Queue(maxsize=50000)
     q_log       = Queue(maxsize=50000)
-    pU_rate     = Value('d', 0.0)
+    pU_rate     = Queue(maxsize=1000)
 
     p1 = Process(target=run_realtime, args=(q_in,))
     pH = Process(target=hub, args=(q_in, [q_graph, q_quantcore, q_log]))

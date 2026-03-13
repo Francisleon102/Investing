@@ -123,6 +123,17 @@ if __name__ == "__main__":
 | `labels_`              | cluster id per point                    |
 | `probabilities_`       | cluster confidence                      |
 | `cluster_persistence_` | cluster stability                       |
+        cluster 0 → 0.92   (very dense)
+        cluster 1 → 0.41   (weak density)
+        cluster 2 → 0.73
 | `outlier_scores_`      | anomaly score                           |
 | `n_clusters_`          | number of clusters                      |
 | `prediction_data_`     | allows predicting clusters for new data |
+
+
+
+| parameter          | what it controls      |
+| ------------------ | --------------------- |
+| `min_samples`      | density strictness    |
+| `min_cluster_size` | smallest cluster size |
+| `metric`           | distance calculation  |
