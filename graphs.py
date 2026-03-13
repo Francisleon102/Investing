@@ -161,7 +161,7 @@ class MainWindow(QMainWindow):
 
         if self.pulse_t:
             m = np.asarray(self.pulse_m[-500:], dtype=float)
-            m = np.convolve(m, [0.25, 0.5, 0.25], mode="same") if m.size >= 3 else m
+            m = np.convolve(m, [1, -1, 1], mode="same") if m.size >= 3 else m
             self.line1.setData(self.pulse_t[-500:], m)
 
       

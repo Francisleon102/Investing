@@ -40,8 +40,6 @@ class ClusterWorker:
         self.M = 0.0        # momentum state
         self.tau = 1.0      # smoothing memory (seconds)    
 
-       
-
 
     def push(self, msg_type, msg):
         if msg is None:
