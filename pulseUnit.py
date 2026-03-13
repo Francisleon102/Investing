@@ -5,9 +5,18 @@ from collections import deque
 from threading import Thread, Lock
 from cuml.cluster import  HDBSCAN, KMeans
 import cuml.accel 
+
+from queue import Full
+import numpy as np
+import hdbscan
+from sklearn.preprocessing import StandardScaler
 from polars import self_dtype 
 import numpy as np
 
+from collections import deque
+from queue import Full
+import numpy as np
+from sklearn.preprocessing import StandardScaler
 
 class GraphsRender:
     def __init__(self):
@@ -27,19 +36,39 @@ class Scatter3D:
         pass
 
 
+
+
+
 class ClusterWorker:
-    def __init__(self,pU_rate):
+    def __init__(self, pU_rate):
         self.enabled = True
+
         self.maxlenght = 5000
         self.buffer = deque(maxlen=self.maxlenght)
-        self.pU_rate = pU_rate
-        # Last variables for Derivatives 
-        self.last_price  = None
-        self.last_time   = None
-        self.last_size  = None 
-        self.M = 0.0        # momentum state
-        self.tau = 1.0      # smoothing memory (seconds)    
 
+        # fixed training window
+        self.cluster_maxlen = 2000
+        self.cluster_buffer = deque(maxlen=self.cluster_maxlen)
+
+        self.pU_rate = pU_rate
+
+        # last variables for derivatives
+        self.last_price = None
+        self.last_time = None
+        self.last_size = None
+
+        # smoothed flow
+        self.M = 0.0
+        self.tau = 1.0
+
+        # clustering state
+        self.scaler = None
+        self.clusterer = None
+        self.is_fitted = False
+
+        # hdbscan params
+        self.min_cluster_size = 25
+        self.min_samples = 5
 
     def push(self, msg_type, msg):
         if msg is None:
@@ -54,16 +83,14 @@ class ClusterWorker:
         new_time = msg.get("t")
         new_price = msg.get("p")
 
-        if new_size is None or new_time is None:
+        if new_size is None or new_time is None or new_price is None:
             return
 
         Tnow = new_time.seconds + new_time.nanoseconds * 1e-9
 
         if self.last_size is not None:
-
             dt = Tnow - self.last_time
             if dt > 0:
-
                 # incoming volume
                 dv = new_size
 
@@ -75,23 +102,77 @@ class ClusterWorker:
 
                 # momentum update
                 self.M = self.M * decay + r * (1 - decay)
+
                 try:
                     self.pU_rate.put_nowait((Tnow, self.M))
                 except Full:
-                    # Drop sample if renderer is behind; keep producer alive.
                     pass
+
+                # features for clustering
+                # use dt, not raw timestamp, so labels are more meaningful
+                self.cluster_buffer.append([self.M, new_price, dt])
 
                 print("M (smoothed rate):", self.M, new_price, Tnow)
 
         self.last_size = new_size
         self.last_time = Tnow
+        self.last_price = new_price
+
+    def fit_clusters(self):
+        if len(self.cluster_buffer) < self.min_cluster_size:
+            return None
+
+        X = np.asarray(self.cluster_buffer, dtype=np.float32)
+
+        self.scaler = StandardScaler()
+        Xs = self.scaler.fit_transform(X)
+
+        self.clusterer = hdbscan.HDBSCAN(
+            min_cluster_size=self.min_cluster_size,
+            min_samples=self.min_samples,
+            prediction_data=True
+        )
+
+        self.clusterer.fit(Xs)
+        self.is_fitted = True
+
+        return {
+            "labels": self.clusterer.labels_,
+            "probabilities": self.clusterer.probabilities_,
+            "outlier_scores": self.clusterer.outlier_scores_,
+            "n_clusters": len(set(self.clusterer.labels_)) - (1 if -1 in self.clusterer.labels_ else 0),
+            "n_noise": int(np.sum(self.clusterer.labels_ == -1)),
+        }
+
+    def predict_latest(self):
+        if not self.is_fitted or self.clusterer is None or self.scaler is None:
+            return None
+
+        if len(self.cluster_buffer) == 0:
+            return None
+
+        x_new = np.asarray([self.cluster_buffer[-1]], dtype=np.float32)
+        x_new_scaled = self.scaler.transform(x_new)
+
+        labels, strengths = hdbscan.approximate_predict(self.clusterer, x_new_scaled)
+
+        return {
+            "point": self.cluster_buffer[-1],
+            "label": int(labels[0]),
+            "strength": float(strengths[0]),
+        }
 
     def step(self):
-        # template for clustering work
-        # example: DBSCAN / HDBSCAN / custom density logic
-        
-        pass
+        if not self.enabled:
+            return None
 
+        # fit once so labels stay consistent
+        if not self.is_fitted:
+            return self.fit_clusters()
+
+        # after fitting, only predict new points
+        return self.predict_latest()
+        
 
 class MathWorker:
     def __init__(self):
