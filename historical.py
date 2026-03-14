@@ -1,41 +1,51 @@
-from account import API_KEY , API_SECRET
+from __future__ import annotations
 
-#from pydoc import cli
-
-import numpy as np
-#import incoming as inc
-
-import pandas as pd
-from alpaca.data.historical import StockHistoricalDataClient, OptionHistoricalDataClient
-from alpaca.data.requests import StockBarsRequest, StockQuotesRequest, OptionTradesRequest, OptionBarsRequest, OptionLatestQuoteRequest
-
-from clients import AlcapaTradingClient
-OptionBarsRequest
-from alpaca.data.enums import DataFeed
-from alpaca.trading.enums import ContractType
-from alpaca.trading.client import OptionContract, TradingClient, TradeAccount, GetOptionContractsRequest
-from alpaca.data.timeframe import TimeFrame ; import cudf as cdf 
-from datetime import datetime, timezone, date
-import polars as pl
-from alpaca.data.live import StockDataStream, OptionDataStream
-from account import API_KEY , API_SECRET
-from collections import  deque
+from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.requests import StockBarsRequest, StockQuotesRequest, StockTradesRequest
+from alpaca.data.timeframe import TimeFrame
 
-global  t2 
+from account import API_KEY, API_SECRET
 
-# alpaca_data_client.py
+
+DEFAULT_SYMBOL = "INTC"
+DEFAULT_START = datetime(2026, 3, 13, tzinfo=timezone.utc)
+
+NP_QUOTES_PATH = Path("np_stock_data.npy")
+NP_TRADES_PATH = Path("np_stock_trades.npy")
+NP_BARS_PATH = Path("np_stock_bars.npy")
+
 
 class AlpacaDataClient:
+    """Same style as your Alpaca class, focused on stock historical data."""
+
     def __init__(self, api_key: str, api_secret: str):
         self.stock_hist = StockHistoricalDataClient(api_key, api_secret)
-        self.option_hist = OptionHistoricalDataClient(api_key, api_secret)
 
+    def stock_quotes(self, symbols, start=None, end=None, limit=None, feed=None):
+        req = StockQuotesRequest(
+            symbol_or_symbols=symbols,
+            start=start,
+            end=end,
+            limit=limit,
+            feed=feed,
+        )
+        return self.stock_hist.get_stock_quotes(req)
 
-    # =========================
-    # HISTORICAL — STOCKS
-    # =========================
+    def stock_trades(self, symbols, start=None, end=None, limit=None, feed=None):
+        req = StockTradesRequest(
+            symbol_or_symbols=symbols,
+            start=start,
+            end=end,
+            limit=limit,
+            feed=feed,
+        )
+        return self.stock_hist.get_stock_trades(req)
+
     def stock_bars(self, symbols, timeframe, start=None, end=None, limit=None, feed=None):
         req = StockBarsRequest(
             symbol_or_symbols=symbols,
@@ -43,149 +53,90 @@ class AlpacaDataClient:
             start=start,
             end=end,
             limit=limit,
-            feed=feed
+            feed=feed,
         )
         return self.stock_hist.get_stock_bars(req)
 
-    def stock_trades(self, symbols, timeframe, start=None, end=None, limit=None, feed=None):
-        req = StockQuotesRequest(
-            symbol_or_symbols=symbols,
-            timeframe=timeframe,
 
+def _normalize_df(df: pd.DataFrame | None) -> np.ndarray:
+    if df is None or df.empty:
+        return np.empty((0, 0), dtype=object)
+
+    df = df.sort_index().reset_index()
+
+    # Keep datetime first when present.
+    if "timestamp" in df.columns:
+        ordered = ["timestamp"] + [c for c in df.columns if c != "timestamp"]
+        df = df[ordered].sort_values("timestamp")
+
+    return df.to_numpy(dtype=object)
+
+
+def _load_cached(path: Path) -> np.ndarray:
+    return np.asarray(np.load(path, allow_pickle=True), dtype=object)
+
+
+def _pull_or_cache(name: str, path: Path, pull_fn, refresh: bool) -> tuple[np.ndarray, bool]:
+    if path.exists() and not refresh:
+        cached = _load_cached(path)
+        print(f"{name}: cache hit ({path}) rows={len(cached)}")
+        return cached, True
+
+    pulled = _normalize_df(pull_fn())
+    if pulled.size == 0:
+        print(f"{name}: no data returned")
+        return pulled, False
+
+    np.save(path, pulled)
+    print(f"{name}: saved {path} rows={len(pulled)}")
+    return pulled, False
+
+
+def run(
+    symbol: str = DEFAULT_SYMBOL,
+    start: datetime = DEFAULT_START,
+    end: datetime | None = None,
+    refresh: bool = False,
+    bars_timeframe: TimeFrame = TimeFrame.Minute,
+):
+    client = AlpacaDataClient(API_KEY, API_SECRET)
+    end = end or datetime.now(timezone.utc)
+
+    quotes, quotes_cached = _pull_or_cache(
+        name="quotes",
+        path=NP_QUOTES_PATH,
+        pull_fn=lambda: client.stock_quotes(symbols=symbol, start=start, end=end).df,
+        refresh=refresh,
+    )
+
+    trades, trades_cached = _pull_or_cache(
+        name="trades",
+        path=NP_TRADES_PATH,
+        pull_fn=lambda: client.stock_trades(symbols=symbol, start=start, end=end).df,
+        refresh=refresh,
+    )
+
+    bars, bars_cached = _pull_or_cache(
+        name="bars",
+        path=NP_BARS_PATH,
+        pull_fn=lambda: client.stock_bars(
+            symbols=symbol,
+            timeframe=bars_timeframe,
             start=start,
             end=end,
-            limit=limit,
-            feed=feed
-        )
-        return self.stock_hist.get_stock_trades(req)
-
-    def stock_quotes(self, symbols, start=None, end=None
-, limit=None, feed=None):
-        req = StockQuotesRequest(
-            symbol_or_symbols=symbols,
-            start=start,
-            end=end,
-            limit=limit,
-            feed=feed
-        )
-        return self.stock_hist.get_stock_quotes(req)
-
-    # =========================
-    # HISTORICAL — OPTIONS
-    # =========================
-    def option_bars(self, symbols, timeframe, start=None, end=None, limit=None, feed=None):
-        req = OptionBarsRequest(
-            symbol_or_symbols=symbols,
-            timeframe=timeframe,
-            start=start,
-            end=end,
-            limit=limit, 
-            feed=feed
-        )
-        return self.option_hist.get_option_bars(req)
-
-    def option_trades(self, symbols, start=None, end=None, limit=None, feed=None):
-        req = OptionTradesRequest(
-            symbol_or_symbols=symbols,
-            start=start,
-            end=end,
-            limit=limit,
-            feed=feed
-        )
-        return self.option_hist.get_option_trades(req)
-
-    def option_quotes(self, symbols, start=None, end=None, limit=None, feed=None):
-        req = OptionTradesRequest(
-            symbol_or_symbols=symbols,
-            start=start,
-            end=end,
-            limit=limit,
-            feed = feed
-        )
-        return self.option_hist.get_option_latest_quote(req)
-    
-
-
-client = AlpacaDataClient(API_KEY, API_SECRET)
-
-
-
-
-NP_STOCK_PATH = Path("np_stock_data.npy")
-
-
-def _left_pop_rows(data: np.ndarray, pop_count: int) -> np.ndarray:
-    """Remove rows from the front (left-pop style)."""
-    if pop_count <= 0:
-        return data
-    if pop_count >= len(data):
-        return data[:0]
-    return data[pop_count:]
-
-
-def _count_tail_match(stored_data: np.ndarray, pulled_data: np.ndarray) -> int:
-    """
-    Count contiguous row matches from the end of both arrays.
-    Example: compare stored[-1] with pulled[-1], then keep moving left.
-    """
-    i = len(stored_data) - 1
-    j = len(pulled_data) - 1
-    matches = 0
-
-    while i >= 0 and j >= 0:
-        if not np.array_equal(stored_data[i], pulled_data[j]):
-            break
-        matches += 1
-        i -= 1
-        j -= 1
-
-    return matches
-
-
-def Agg(stored_data: np.ndarray, pulled_data: np.ndarray) -> dict:
-    """
-    Assumes start dates are the same.
-    - Match from the last index backwards.
-    - Count overlap.
-    - Left-pop new rows from the pulled data by overlap delta.
-    """
-    if stored_data.size == 0:
-        return {
-            "tail_match_count": 0,
-            "added_rows_count": len(pulled_data),
-            "aligned_pulled_data": pulled_data,
-            "new_rows_only": pulled_data,
-            "full_tail_match": False,
-        }
-
-    tail_match_count = _count_tail_match(stored_data, pulled_data)
-    added_rows_count = max(len(pulled_data) - tail_match_count, 0)
+        ).df,
+        refresh=refresh,
+    )
 
     return {
-        "tail_match_count": tail_match_count,
-        "added_rows_count": added_rows_count,
-        "aligned_pulled_data": _left_pop_rows(pulled_data, added_rows_count),
-        "new_rows_only": pulled_data[:added_rows_count],
-        "full_tail_match": tail_match_count == len(stored_data),
+        "quotes": quotes,
+        "trades": trades,
+        "bars": bars,
+        "quotes_cached": quotes_cached,
+        "trades_cached": trades_cached,
+        "bars_cached": bars_cached,
     }
 
 
-stored_np = np.load(NP_STOCK_PATH, allow_pickle=True) if NP_STOCK_PATH.exists() else np.empty((0, 0), dtype=object)
-stock_quote = client.stock_quotes(
-    symbols="INTC",
-    start=datetime(2026, 3, 13),
-    end=datetime.today()
-).df
-pulled_np = stock_quote.to_numpy(dtype=object)
-
-agg_result = Agg(stored_np, pulled_np)
-
-if stored_np.size > 0:
-    print(
-        "tail_match_count=", agg_result["tail_match_count"],
-        "added_rows_count=", agg_result["added_rows_count"],
-        "full_tail_match=", agg_result["full_tail_match"],
-    )
-
-np.save(NP_STOCK_PATH, pulled_np)
-print(f"stock data saved to {NP_STOCK_PATH} rows={len(pulled_np)}")
+if __name__ == "__main__":
+    run()

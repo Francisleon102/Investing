@@ -65,10 +65,14 @@ class ClusterWorker:
         self.scaler = None
         self.clusterer = None
         self.is_fitted = False
+        self.n_clusters = 0
+        self.last_fit_count = 0
 
         # hdbscan params
         self.min_cluster_size = 25
         self.min_samples = 5
+        # If a fit yields only noise, wait for this many new points before refitting.
+        self.refit_stride = 100
 
     def push(self, msg_type, msg):
         if msg is None:
@@ -135,17 +139,24 @@ class ClusterWorker:
 
         self.clusterer.fit(Xs)
         self.is_fitted = True
+        self.last_fit_count = len(self.cluster_buffer)
+
+        labels = self.clusterer.labels_
+        self.n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
 
         return {
-            "labels": self.clusterer.labels_,
+            "labels": labels,
             "probabilities": self.clusterer.probabilities_,
             "outlier_scores": self.clusterer.outlier_scores_,
-            "n_clusters": len(set(self.clusterer.labels_)) - (1 if -1 in self.clusterer.labels_ else 0),
-            "n_noise": int(np.sum(self.clusterer.labels_ == -1)),
+            "n_clusters": self.n_clusters,
+            "n_noise": int(np.sum(labels == -1)),
         }
 
     def predict_latest(self):
         if not self.is_fitted or self.clusterer is None or self.scaler is None:
+            return None
+        # hdbscan.approximate_predict warns if the fit produced only noise.
+        if self.n_clusters == 0:
             return None
 
         if len(self.cluster_buffer) == 0:
@@ -166,8 +177,15 @@ class ClusterWorker:
         if not self.enabled:
             return None
 
+        if len(self.cluster_buffer) < self.min_cluster_size:
+            return None
+
         # fit once so labels stay consistent
         if not self.is_fitted:
+            return self.fit_clusters()
+
+        # If the last fit had no clusters, periodically refit as new data arrives.
+        if self.n_clusters == 0 and (len(self.cluster_buffer) - self.last_fit_count) >= self.refit_stride:
             return self.fit_clusters()
 
         # after fitting, only predict new points
