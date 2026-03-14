@@ -3,7 +3,7 @@ import time
 from queue import Empty, Full
 from collections import deque
 from threading import Thread, Lock
-from cuml.cluster import  HDBSCAN, KMeans
+#from cuml.cluster import  HDBSCAN, KMeans
 import cuml.accel 
 
 from queue import Full
@@ -47,7 +47,7 @@ class ClusterWorker:
         self.buffer = deque(maxlen=self.maxlenght)
 
         # fixed training window
-        self.cluster_maxlen = 2000
+        self.cluster_maxlen = 5000
         self.cluster_buffer = deque(maxlen=self.cluster_maxlen)
 
         self.pU_rate = pU_rate
@@ -97,27 +97,20 @@ class ClusterWorker:
             if dt > 0:
                 # incoming volume
                 dv = new_size
-
                 # raw flow rate
                 r = dv / dt
-
                 # exponential decay
                 decay = np.exp(-dt / self.tau)
-
                 # momentum update
                 self.M = self.M * decay + r * (1 - decay)
-
                 try:
                     self.pU_rate.put_nowait((Tnow, self.M))
                 except Full:
                     pass
-
                 # features for clustering
                 # use dt, not raw timestamp, so labels are more meaningful
                 self.cluster_buffer.append([self.M, new_price, dt])
-
                 print("M (smoothed rate):", self.M, new_price, Tnow)
-
         self.last_size = new_size
         self.last_time = Tnow
         self.last_price = new_price
